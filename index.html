@@ -208,7 +208,7 @@ button:active{ transform: translateY(0); }
 
 <div class="wrap">
 
-  <!-- KPI BAR (between header and form/grid) -->
+  <!-- KPI BAR -->
   <div class="kpi-bar">
     <div class="kpis">
       <div class="kpi new">
@@ -402,6 +402,52 @@ function parseCSV(str){
   });
 }
 
+/* ---------- Make smart Details block ---------- */
+function renderDetailsCell(raw){
+  const val = (raw ?? '').trim();
+  if (!val) return ''; // nothing to show
+
+  // If no URL at all -> plain text with line breaks
+  const hasUrl = /https?:\/\/\S+/i.test(val);
+
+  if (!hasUrl) {
+    // numeric or plain text – just show
+    return `
+      <div class="detail-label">Details</div>
+      <div class="detail-block">${escapeHtml(val).replace(/\r?\n/g,'<br>')}</div>
+    `;
+  }
+
+  // Split by whitespace to find URLs and keep text
+  let html = escapeHtml(val);
+
+  // Replace URLs with styled anchors
+  html = html.replace(/https?:\/\/\S+/gi, (m0)=>{
+    // trim trailing punctuation from match
+    const safe = m0.replace(/[)>];?.,]*$/, '');
+    const trail = m0.slice(safe.length);
+
+    let label = 'Open Link';
+    if (/drive\.google\.com/i.test(safe)) label = 'Download';
+    if (/meet\.google\.com/i.test(safe))  label = 'Join Meet';
+    if (/zoom\.us/i.test(safe))           label = 'Join Meeting';
+
+    // For long non-drive links inside paragraph, use inline style
+    const isDrive = /drive\.google\.com/i.test(safe);
+    if (isDrive) {
+      return `<a href="${safe}" target="_blank" rel="noopener">${label}</a>${escapeHtml(trail)}`;
+    } else {
+      // show inline underlined link text (keeps surrounding text readable)
+      return `<a class="inline-link" href="${safe}" target="_blank" rel="noopener">${label}</a>${escapeHtml(trail)}`;
+    }
+  });
+
+  return `
+    <div class="detail-label">Details</div>
+    <div class="detail-block">${html.replace(/\r?\n/g,'<br>')}</div>
+  `;
+}
+
 /* ---------- KPIs from CSV ---------- */
 async function loadKpis(){
   try{
@@ -450,7 +496,6 @@ issueForm.addEventListener('submit', async (e)=>{
   const statusEl = document.getElementById('issueFormStatus');
   statusEl.textContent = "Submitting, please wait…";
   try{
-    // Prepare payload
     const issueCode = genIssueCode();
     const form = new FormData(issueForm);
 
@@ -458,10 +503,9 @@ issueForm.addEventListener('submit', async (e)=>{
     const phone = (form.get('countryCode')||'') + (form.get('portalNumber')||'');
     form.set('fullPortal', phone);
     form.set('issueCode', issueCode);
-    form.set('action', 'create');      // tell Apps Script this is a create
-    form.set('sheetName', 'Response');  // your sheet tab name
+    form.set('action', 'create');
+    form.set('sheetName', 'Response');
 
-    // Image to base64 (optional)
     const imgInput = document.getElementById('image');
     if(imgInput.files && imgInput.files[0]){
       const file = imgInput.files[0];
@@ -471,27 +515,19 @@ issueForm.addEventListener('submit', async (e)=>{
       form.set('imageName', file.name);
     }
 
-    // POST to Apps Script Web App
     const res = await fetch(APPS_SCRIPT_URL, { method:'POST', body: form });
     if(!res.ok) throw new Error('Network error');
     const txt = await res.text();
     console.log('Server says:', txt);
 
-    // Show timeline (dummy)
     const type = form.get('doubtType');
     afterSubmit.innerHTML = buildTimeline(type, issueCode);
     afterSubmit.style.display = 'block';
 
-    // show status
     statusEl.textContent = "✅ Submitted successfully!";
-
-    // refresh right side & KPIs
     searchStatusByCode(issueCode);
     loadKpis();
-
-    // scroll to timeline
     afterSubmit.scrollIntoView({behavior:'smooth', block:'start'});
-
   }catch(err){
     console.error(err);
     afterSubmit.innerHTML = `<span class="pill danger">Error:</span> ${escapeHtml(err.message)}`;
@@ -529,7 +565,7 @@ function buildTimeline(type, code){
   `;
 }
 
-/* ---------- Search Status by IssueCode (from CSV) ---------- */
+/* ---------- Search Status by IssueCode (from CSV) + DETAILS (Status-next) ---------- */
 async function searchStatusByCode(issueCode){
   const box = document.getElementById('searchResult');
   box.innerHTML = 'Searching...';
@@ -540,9 +576,15 @@ async function searchStatusByCode(issueCode){
     const rows = parseCSV(csv);
 
     const header = rows[0] || [];
-    const codeIdx = header.findIndex(h => /issue.?code/i.test(h));
+    const codeIdx   = header.findIndex(h => /issue.?code/i.test(h));
     const statusIdx = header.findIndex(h => /status/i.test(h));
+
     if(codeIdx === -1 || statusIdx === -1) throw new Error('CSV missing IssueCode/Status columns');
+
+    // Find an explicit "details-like" column, else use immediate next column after Status
+    let detailsIdx = header.findIndex(h => String(h).trim().toLowerCase() === 'details');
+if (detailsIdx === -1) detailsIdx = statusIdx + 1; // fallback
+
 
     const body = rows.slice(1);
     const hit = body.find(r => (r[codeIdx]||'').trim() === issueCode.trim());
@@ -558,9 +600,13 @@ async function searchStatusByCode(issueCode){
              : (s.includes('progress') || s.includes('wip') || s.includes('check')) ? 'warn'
              : 'danger';
 
+    const detailsVal = hit[detailsIdx] ?? '';
+    const detailsHTML = renderDetailsCell(detailsVal);
+
     box.innerHTML = `
       <div><strong>${escapeHtml(issueCode)}</strong></div>
       <div class="status"><span class="pill ${cls}">${escapeHtml(status)}</span></div>
+      ${detailsHTML}
     `;
   }catch(err){
     box.innerHTML = `<div class="pill danger">Error</div> ${escapeHtml(err.message)}`;
@@ -598,12 +644,7 @@ ratingForm.addEventListener('submit', async (e)=>{
 
 /* ---------- KPI Refresh button ---------- */
 document.getElementById('kpiRefresh').addEventListener('click', async ()=>{
-  const old = ''; // optionally use a status bar text if you have one
-  try{
-    await loadKpis();
-  }catch(e){
-    console.error(e);
-  }
+  try{ await loadKpis(); }catch(e){ console.error(e); }
 });
 
 /* ---------- Init ---------- */
