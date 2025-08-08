@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PW Gulf Online CBSE Student Helpdesk | Issue Form</title>
+<style>
+  :root{
+    --bg:#0f172a; --card:#111827; --ink:#e5e7eb; --muted:#9ca3af;
+    --accent:#60a5fa; --ok:#22c55e; --warn:#f59e0b; --danger:#ef4444;
+    --line:#1f2937;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
+  header{padding:16px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#0f172acc;backdrop-filter:blur(6px)}
+  header h1{margin:0;font-size:18px;letter-spacing:.2px}
+  .wrap{max-width:1200px;margin:0 auto;padding:16px}
+  .grid{display:grid;grid-template-columns:1fr;gap:16px}
+  @media(min-width:960px){ .grid{grid-template-columns:1.1fr .9fr} }
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+  h2{margin:0 0 10px 0;font-size:18px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .stack>*+*{margin-top:10px}
+  label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px}
+  input[type=text],input[type=number],select,textarea{
+    width:100%;padding:10px 12px;border:1px solid #223047;background:#0b1220;color:var(--ink);
+    border-radius:8px;font-size:14px;outline:none
+  }
+  textarea{min-height:120px;resize:vertical}
+  input[type=file]{color:var(--muted);font-size:13px}
+  button{
+    appearance:none;border:0;border-radius:10px;padding:10px 14px;background:var(--accent);color:#071427;
+    font-weight:600;cursor:pointer
+  }
+  button.secondary{background:#1f2937;color:var(--ink)}
+  .help{font-size:12px;color:var(--muted)}
+  .right{max-height:70vh;overflow:auto;border-radius:10px;border:1px solid var(--line); padding:12px}
+  .timeline{background:#0b1328;border:1px solid var(--line);border-radius:10px;padding:12px}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px}
+  .ok{background:#052e20;color:#86efac;border:1px solid #14532d}
+  .warn{background:#3a2a07;color:#fde68a;border:1px solid #a16207}
+  .danger{background:#3b0a0a;color:#fecaca;border:1px solid #7f1d1d}
+  .status{font-weight:600}
+  .footer-note{font-size:12px;color:#9ca3af;margin-top:6px}
+</style>
+</head>
+<body>
+<header>
+  <h1>PW Gulf Online CBSE Helpdesk — Term-1 Doubt & Support</h1>
+</header>
+
+<div class="wrap">
+  <div class="grid">
+    <!-- LEFT: FORM -->
+    <div class="panel">
+      <h2>Submit Your Issue</h2>
+      <form id="issueForm" class="stack" enctype="multipart/form-data">
+        <div class="row">
+          <div>
+            <label for="studentName">Student Name (auto Proper Case)</label>
+            <input id="studentName" name="studentName" type="text" placeholder="e.g., aditya singh" required />
+          </div>
+          <div>
+            <!-- UPDATED: Batch dropdown -->
+            <label for="batchName">Batch Name</label>
+            <select id="batchName" name="batchName" required>
+              <option value="" disabled selected>Select Batch</option>
+              <option>Impact</option>
+              <option>Succeed</option>
+              <option>Exceed</option>
+              <option>Achiever</option>
+              <option>Triumph</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row-3">
+          <div>
+            <label for="grade">Grade</label>
+            <select id="grade" name="grade" required>
+              <option value="" disabled selected>Choose Grade</option>
+              <option>Class 8</option>
+              <option>Class 9</option>
+              <option>Class 10</option>
+              <option>Class 11</option>
+              <option>Class 12</option>
+            </select>
+          </div>
+          <div>
+            <label for="section">Section</label>
+            <select id="section" name="section" required>
+              <option value="" disabled selected>Choose Section</option>
+              <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>
+            </select>
+          </div>
+          <div>
+            <label>Registered Portal Number</label>
+            <div class="row" style="grid-template-columns: 0.9fr 1.1fr;">
+              <select id="cc" name="countryCode" required>
+                <option value="+971">🇦🇪 +971 (UAE)</option>
+                <option value="+966">🇸🇦 +966 (Saudi)</option>
+                <option value="+965">🇰🇼 +965 (Kuwait)</option>
+                <option value="+974">🇶🇦 +974 (Qatar)</option>
+                <option value="+968">🇴🇲 +968 (Oman)</option>
+                <option value="+973">🇧🇭 +973 (Bahrain)</option>
+                <option value="+91">🇮🇳 +91 (India)</option>
+              </select>
+              <input id="portalNumber" name="portalNumber" type="number" inputmode="numeric" placeholder="e.g., 501234567" required />
+            </div>
+            <div class="help">Country code + numeric portal number</div>
+          </div>
+        </div>
+
+        <div>
+          <label for="doubtType">Type of Doubt</label>
+          <select id="doubtType" name="doubtType" required>
+            <option value="" disabled selected>Select Doubt Type</option>
+            <option>Tech</option>
+            <option>Academic</option>
+            <option>Fee Related</option>
+            <option>Support Related</option>
+            <option>Portal Related</option>
+            <option>Teacher Related</option>
+            <option>Content Related</option>
+            <option>Exam Related</option>
+            <option>Syllabus Related</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="explain">Explain in Words</label>
+          <textarea id="explain" name="explain" placeholder="Describe your issue clearly..." required></textarea>
+        </div>
+
+        <div>
+          <label for="image">Upload Image (optional, .jpg/.png)</label>
+          <input id="image" name="image" type="file" accept="image/*" />
+        </div>
+
+        <div class="row">
+          <button type="submit">SUBMIT</button>
+          <button type="button" id="resetBtn" class="secondary">Reset</button>
+        </div>
+
+        <div id="afterSubmit" class="timeline" style="display:none;"></div>
+        <div class="footer-note">All submissions go to Google Sheet: <em>Response</em> (replace endpoint below).</div>
+      </form>
+    </div>
+
+    <!-- RIGHT: SEARCH STATUS + RATING -->
+    <div class="panel">
+      <h2>Issue Status (Public View)</h2>
+
+      <!-- UPDATED: Search UI (no auto list) -->
+      <div class="right">
+        <div class="row" style="grid-template-columns:1fr auto;">
+          <input id="searchCode" type="text" placeholder="Paste Issue Code (e.g., ISS-2025...)" />
+          <button id="searchBtn" type="button">Search Status</button>
+        </div>
+        <div id="searchResult" class="stack" style="margin-top:12px"></div>
+      </div>
+
+      <div class="stack" style="margin-top:16px">
+        <h2>Submit Rating (After Resolved)</h2>
+        <form id="ratingForm" class="stack">
+          <div class="row">
+            <div>
+              <label for="issueIdRate">Issue Code</label>
+              <input id="issueIdRate" name="issueIdRate" type="text" placeholder="e.g., ISS-20250808-123" required />
+            </div>
+            <div>
+              <label for="rating">Rating</label>
+              <select id="rating" name="rating" required>
+                <option value="" disabled selected>Rate</option>
+                <option>1 - Poor</option>
+                <option>2 - Fair</option>
+                <option>3 - Good</option>
+                <option>4 - Very Good</option>
+                <option>5 - Excellent</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label for="ratingNote">Optional Note</label>
+            <textarea id="ratingNote" name="ratingNote" placeholder="Any feedback..."></textarea>
+          </div>
+          <div>
+            <button type="submit">Submit Rating</button>
+          </div>
+          <div id="ratingMsg" class="help"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===================== CONFIG (replace these) ===================== */
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxmRksgNIik8cGDEFcpogwFw5LP7avQYCfrsBVfmZt5GjQDBWG_3ZxRMeLrWq1GaQ2Y/exec"; // <-- your current URL
+// Published CSV of your Response sheet (File > Publish to web > Response > CSV)
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR5QUIu5Rgt60enJRY67cq-DgqaPGIG16GW8i3USMmp4CE9B7PsQ2L8mtzXO6-CqNXOncW7Cq0oJETw/pub?gid=0&single=true&output=csv"; // <-- your current CSV
+/* ================================================================= */
+
+/* ---------- Utils ---------- */
+function toProperCase(str){
+  return (str||"")
+    .toLowerCase()
+    .replace(/(^|[\s\-_\/\.])([a-z])/g, (_,p1,p2)=> p1 + p2.toUpperCase());
+}
+function genIssueCode(){
+  const d=new Date();
+  const pad=n=> String(n).padStart(2,'0');
+  return `ISS-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${d.getHours()}${pad(d.getMinutes())}${pad(d.getSeconds())}-${Math.floor(Math.random()*900+100)}`;
+}
+function readFileAsBase64(file){
+  return new Promise((resolve,reject)=>{
+    const fr=new FileReader();
+    fr.onload=()=>resolve(fr.result);
+    fr.onerror=reject;
+    fr.readAsDataURL(file);
+  });
+}
+function escapeHtml(s){ return (s||"").replace(/[&<>"]/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c])); }
+
+/* ---------- Proper Case only for name ---------- */
+const nameEl = document.getElementById('studentName');
+nameEl.addEventListener('blur',()=> nameEl.value = toProperCase(nameEl.value));
+
+/* ---------- Submit Issue ---------- */
+const issueForm = document.getElementById('issueForm');
+const afterSubmit = document.getElementById('afterSubmit');
+const resetBtn = document.getElementById('resetBtn');
+
+issueForm.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  try{
+    const issueCode = genIssueCode();
+    const form = new FormData(issueForm);
+
+    // normalize text to proper case again
+    form.set('studentName', toProperCase(form.get('studentName')));
+
+    const phone = (form.get('countryCode')||'') + (form.get('portalNumber')||'');
+    form.set('fullPortal', phone);
+    form.set('issueCode', issueCode);
+    form.set('action', 'create');
+    form.set('sheetName', 'Response');
+
+    // Image to base64 (optional)
+    const imgInput = document.getElementById('image');
+    if(imgInput.files && imgInput.files[0]){
+      const file = imgInput.files[0];
+      if(!file.type.startsWith('image/')) throw new Error('Only image files allowed');
+      const b64 = await readFileAsBase64(file);
+      form.set('imageData', b64);
+      form.set('imageName', file.name);
+    }
+
+    const res = await fetch(APPS_SCRIPT_URL, { method:'POST', body: form });
+    if(!res.ok) throw new Error('Network error');
+    const txt = await res.text();
+    console.log('Server says:', txt);
+
+    // Timeline (dummy)
+    const type = form.get('doubtType');
+    afterSubmit.innerHTML = buildTimeline(type, issueCode);
+    afterSubmit.style.display = 'block';
+
+    // RIGHT: show status for this specific IssueCode
+    searchStatusByCode(issueCode);
+
+    // Scroll
+    afterSubmit.scrollIntoView({behavior:'smooth', block:'start'});
+  }catch(err){
+    console.error(err);
+    afterSubmit.innerHTML = `<span class="pill danger">Error:</span> ${escapeHtml(err.message)}`;
+    afterSubmit.style.display = 'block';
+  }
+});
+
+resetBtn.addEventListener('click', ()=>{
+  issueForm.reset();
+  afterSubmit.style.display='none';
+});
+
+/* ---------- Dummy timeline logic (edit later) ---------- */
+function buildTimeline(type, code){
+  const rules = {
+    "Tech": {sla:"30 min", steps:["Ticket created","Tech triage","Fix in progress","Resolved"]},
+    "Academic": {sla:"4 hrs", steps:["Academic mentor assigned","Doubt review","Solution shared","Closed"]},
+    "Fee Related": {sla:"24 hrs", steps:["Finance review","Verification","Resolution update","Closed"]},
+    "Support Related": {sla:"2 hrs", steps:["Support queue","Agent picked","Guided steps shared","Resolved"]},
+    "Portal Related": {sla:"3 hrs", steps:["Portal team check","Bug/Config","Patch applied","Closed"]},
+    "Teacher Related": {sla:"12 hrs", steps:["Escalate to HOD","Teacher response","Plan of action","Closed"]},
+    "Content Related": {sla:"8 hrs", steps:["QC check","Corrected material","Re-uploaded","Closed"]},
+    "Exam Related": {sla:"6 hrs", steps:["Exam team review","Admit/instructions fix","Notice shared","Closed"]},
+    "Syllabus Related": {sla:"12 hrs", steps:["Schedule check","Update plan","Notify student","Closed"]}
+  };
+  const r = rules[type] || {sla:"6 hrs", steps:["Queued","In Progress","Under Review","Closed"]};
+  return `
+    <div><span class="pill ok">Submitted</span> <strong>${code}</strong></div>
+    <div class="help">Type: <strong>${type}</strong> • SLA Target: <strong>${r.sla}</strong></div>
+    <ol style="margin:8px 0 0 18px;">
+      ${r.steps.map(s=>`<li>${s}</li>`).join("")}
+    </ol>
+  `;
+}
+
+/* ---------- Search Status by IssueCode (from CSV) ---------- */
+function parseCSV(str){
+  const lines = str.trim().split(/\r?\n/);
+  return lines.map(l=>{
+    const out=[]; let cur=''; let q=false;
+    for(let i=0;i<l.length;i++){
+      const ch=l[i];
+      if(ch==='\"'){ q=!q; continue; }
+      if(ch===',' && !q){ out.push(cur); cur=''; continue; }
+      cur+=ch;
+    }
+    out.push(cur);
+    return out.map(s=>s.trim());
+  });
+}
+
+async function searchStatusByCode(issueCode){
+  const box = document.getElementById('searchResult');
+  box.innerHTML = 'Searching...';
+  try{
+    const res = await fetch(SHEET_CSV_URL + '&_=' + Date.now(), {cache:'no-store'});
+    if(!res.ok) throw new Error('Sheet not reachable');
+    const csv = await res.text();
+    const rows = parseCSV(csv);
+
+    const header = rows[0] || [];
+    const codeIdx = header.findIndex(h => /issue.?code/i.test(h));
+    const statusIdx = header.findIndex(h => /status/i.test(h));
+    if(codeIdx === -1 || statusIdx === -1) throw new Error('CSV missing IssueCode/Status columns');
+
+    const body = rows.slice(1);
+    const hit = body.find(r => (r[codeIdx]||'').trim() === issueCode.trim());
+
+    if(!hit){
+      box.innerHTML = `<div class="pill danger">Not found</div> Check the code and try again.`;
+      return;
+    }
+
+    const status = (hit[statusIdx]||'');
+    const s = status.toLowerCase();
+    const cls = s.includes('resolv') ? 'ok'
+             : (s.includes('progress') || s.includes('wip') || s.includes('check')) ? 'warn'
+             : 'danger';
+
+    box.innerHTML = `
+      <div><strong>${escapeHtml(issueCode)}</strong></div>
+      <div class="status"><span class="pill ${cls}">${escapeHtml(status)}</span></div>
+    `;
+  }catch(err){
+    box.innerHTML = `<div class="pill danger">Error</div> ${escapeHtml(err.message)}`;
+  }
+}
+
+document.getElementById('searchBtn').addEventListener('click', ()=>{
+  const code = document.getElementById('searchCode').value;
+  if(code.trim()) searchStatusByCode(code);
+});
+
+/* ---------- Rating Submit (sends to Feedback tab) ---------- */
+const ratingForm = document.getElementById('ratingForm');
+const ratingMsg  = document.getElementById('ratingMsg');
+
+ratingForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  ratingMsg.textContent = "Submitting...";
+  try {
+    const fd = new FormData(ratingForm);
+    fd.set('action', 'feedback');
+    fd.set('issueIdRate', (fd.get('issueIdRate')||'').trim());
+
+    const res = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: fd });
+    const text = await res.text().catch(()=> '');
+    if (!res.ok || !/OK:\s*feedback/i.test(text)) {
+      throw new Error(text || `HTTP ${res.status} ${res.statusText}`);
+    }
+
+    ratingMsg.textContent = "Thanks! Feedback recorded.";
+    ratingForm.reset();
+  } catch (err) {
+    console.error(err);
+    ratingMsg.textContent = "Error: " + (err.message || err);
+  }
+});
+
+/* ---------- Init ---------- */
+// No auto list; user searches by Issue Code
+</script>
+
+</body>
+</html>
