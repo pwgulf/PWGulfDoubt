@@ -182,6 +182,25 @@ button:active{ transform: translateY(0); }
   .danger{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}
   .status{font-weight:600}
   .footer-note{font-size:12px;color:var(--muted);margin-top:6px;text-align:center}
+  /* KPI dashboard */
+.kpis{
+  display:grid; grid-template-columns:repeat(3,1fr);
+  gap:12px; margin:8px 0 16px;
+}
+.kpi{
+  background:var(--card); border:1px solid var(--line); border-radius:12px;
+  padding:12px; box-shadow:0 4px 12px rgba(0,0,0,.05);
+}
+.kpi-label{font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em}
+.kpi-value{font-size:28px; font-weight:800; line-height:1.1; margin-top:2px}
+.kpi.new{border-left:4px solid var(--accent)}
+.kpi.wip{border-left:4px solid var(--warn)}
+.kpi.res{border-left:4px solid var(--ok)}
+@media (max-width:700px){
+  .kpis{grid-template-columns:1fr 1fr}
+  .kpi:nth-child(3){grid-column:1/-1}
+}
+
 </style>
 </head>
 <header class="site-header">
@@ -192,6 +211,22 @@ button:active{ transform: translateY(0); }
 
 
 <div class="wrap">
+  <!-- KPI BAR -->
+  <div id="kpis" class="kpis">
+    <div class="kpi new">
+      <div class="kpi-label">Total New</div>
+      <div id="kpiNew" class="kpi-value">0</div>
+    </div>
+    <div class="kpi wip">
+      <div class="kpi-label">Total WIP</div>
+      <div id="kpiWip" class="kpi-value">0</div>
+    </div>
+    <div class="kpi res">
+      <div class="kpi-label">Total Resolved</div>
+      <div id="kpiRes" class="kpi-value">0</div>
+    </div>
+  </div>
+
   <div class="grid">
     <!-- LEFT: FORM -->
     <div class="panel">
@@ -410,6 +445,8 @@ issueForm.addEventListener('submit', async (e)=>{
 
     // RIGHT: show status for this specific IssueCode
     searchStatusByCode(issueCode);
+// refresh KPIs after a new ticket
+loadKpis();
 
     // Scroll
     afterSubmit.scrollIntoView({behavior:'smooth', block:'start'});
@@ -462,6 +499,39 @@ function parseCSV(str){
     out.push(cur);
     return out.map(s=>s.trim());
   });
+}
+/* ===== KPIs from CSV ===== */
+async function loadKpis(){
+  try{
+    const res = await fetch(SHEET_CSV_URL + '&_=' + Date.now(), { cache:'no-store' });
+    if(!res.ok) throw new Error('Sheet not reachable');
+    const csv = await res.text();
+    const rows = parseCSV(csv);
+
+    const header = rows[0] || [];
+    const statusIdx = header.findIndex(h => /status/i.test(h));
+    if(statusIdx === -1){ setKpi('-', '-', '-'); return; }
+
+    let totalNew = 0, totalWip = 0, totalResolved = 0;
+    rows.slice(1).forEach(r => {
+      const s = (r[statusIdx] || '').trim().toLowerCase();
+      if(!s) return;
+      if (s.includes('resolv') || s === 'closed') totalResolved++;
+      else if (s.includes('progress') || s.includes('wip') || s.includes('check')) totalWip++;
+      else if (s.includes('new') || s.includes('submitted')) totalNew++;
+      else totalNew++;
+    });
+
+    setKpi(totalNew, totalWip, totalResolved);
+  }catch(err){
+    console.error(err);
+    setKpi('-', '-', '-');
+  }
+}
+function setKpi(n, w, r){
+  document.getElementById('kpiNew').textContent = n;
+  document.getElementById('kpiWip').textContent = w;
+  document.getElementById('kpiRes').textContent = r;
 }
 
 async function searchStatusByCode(issueCode){
@@ -534,6 +604,8 @@ ratingForm.addEventListener('submit', async (e) => {
 
 /* ---------- Init ---------- */
 // No auto list; user searches by Issue Code
+  loadKpis();
+
 </script>
 
 </body>
