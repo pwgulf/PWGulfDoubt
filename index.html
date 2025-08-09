@@ -650,5 +650,228 @@ document.getElementById('kpiRefresh').addEventListener('click', async ()=>{
 /* ---------- Init ---------- */
 loadKpis(); // initial KPI load
 </script>
+<!-- ====== PW Gulf Chatbot (drop-in) ====== -->
+<style>
+  .pwchat-fab{
+    position:fixed; right:18px; bottom:18px; z-index:9999;
+    width:56px; height:56px; border-radius:50%;
+    background:#2563eb; color:#fff; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 10px 24px rgba(37,99,235,.35); cursor:pointer; font-weight:800; font-size:20px;
+  }
+  .pwchat-win{
+    position:fixed; right:18px; bottom:86px; z-index:9999; width:320px; max-height:70vh;
+    background:#fff; border:1px solid #e5e7eb; border-radius:14px; box-shadow:0 18px 36px rgba(0,0,0,.18);
+    display:none; overflow:hidden; font-family:system-ui, Segoe UI, Roboto, Arial, sans-serif;
+  }
+  .pwchat-head{ background:linear-gradient(90deg,#1e40af,#2563eb,#1e40af); color:#fff; padding:10px 12px; font-weight:800; font-size:14px; display:flex; align-items:center; justify-content:space-between }
+  .pwchat-body{ padding:10px; height:320px; overflow:auto; background:#f8fafc }
+  .pwchat-input{ display:flex; gap:6px; padding:8px; border-top:1px solid #e5e7eb; background:#fff }
+  .pwchat-input input{ flex:1; padding:8px 10px; border:1px solid #e5e7eb; border-radius:8px }
+  .pwchat-input button{ border:0; background:#2563eb; color:#fff; padding:8px 12px; border-radius:8px; font-weight:700; cursor:pointer }
+  .pwchat-msg{ margin:6px 0; display:flex; gap:8px }
+  .pwchat-msg.user{ justify-content:flex-end }
+  .pwchat-bubble{ max-width:76%; padding:8px 10px; border-radius:12px; font-size:13px; line-height:1.35 }
+  .pwchat-msg.bot .pwchat-bubble{ background:#ffffff; border:1px solid #e5e7eb }
+  .pwchat-msg.user .pwchat-bubble{ background:#2563eb; color:#fff }
+  .pwchat-opts{ margin-top:6px; display:flex; flex-wrap:wrap; gap:6px }
+  .pwchat-opts button{ background:#eef2ff; color:#1e3a8a; border:1px solid #c7d2fe; border-radius:999px; padding:6px 10px; font-size:12px; cursor:pointer }
+</style>
+
+<div class="pwchat-fab" id="pwChatFab" title="Chat">💬</div>
+<div class="pwchat-win" id="pwChatWin" aria-live="polite">
+  <div class="pwchat-head">
+    <span>PW Gulf Helpdesk</span>
+    <button type="button" id="pwChatClose" style="all:unset;cursor:pointer;font-weight:800;">✕</button>
+  </div>
+  <div class="pwchat-body" id="pwChatBody"></div>
+  <div class="pwchat-input">
+    <input id="pwChatInput" type="text" placeholder="Type here..." />
+    <button id="pwChatSend" type="button">Send</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ====== CONFIG: put your published KB CSV link here ======
+  const KB_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR5QUIu5Rgt60enJRY67cq-DgqaPGIG16GW8i3USMmp4CE9B7PsQ2L8mtzXO6-CqNXOncW7Cq0oJETw/pub?gid=1395295306&single=true&output=csv";
+  // We will reuse APPS_SCRIPT_URL and parseCSV from your main page (already defined globally)
+
+  // State
+  const chat = {
+    kb: [],                 // [{intent, category, phrases, answer_html, options, option_targets}]
+    map: new Map(),         // intent -> node
+    session: Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,7),
+  };
+
+  // UI refs
+  const fab = document.getElementById('pwChatFab');
+  const win = document.getElementById('pwChatWin');
+  const body = document.getElementById('pwChatBody');
+  const input = document.getElementById('pwChatInput');
+  const sendBtn = document.getElementById('pwChatSend');
+  const closeBtn = document.getElementById('pwChatClose');
+
+  // Open/close
+  fab.onclick = () => { win.style.display = 'block'; input.focus(); if (!chat.kbLoaded) boot(); };
+  closeBtn.onclick = () => { win.style.display = 'none'; };
+
+  function scrollBottom(){ body.scrollTop = body.scrollHeight; }
+  function htmlSafe(s){ return (s||"").replace(/[&<>"]/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;" }[c])); }
+
+  function addBot(html, options){
+    const wrap = document.createElement('div'); wrap.className = 'pwchat-msg bot';
+    const bubble = document.createElement('div'); bubble.className = 'pwchat-bubble'; bubble.innerHTML = html;
+    wrap.appendChild(bubble);
+    if (options && options.length){
+      const ops = document.createElement('div'); ops.className = 'pwchat-opts';
+      options.forEach(({label,target})=>{
+        const b = document.createElement('button'); b.textContent = label;
+        b.onclick = ()=> goIntent(target);
+        ops.appendChild(b);
+      });
+      wrap.appendChild(ops);
+    }
+    body.appendChild(wrap); scrollBottom();
+  }
+  function addUser(text){
+    const wrap = document.createElement('div'); wrap.className = 'pwchat-msg user';
+    const bubble = document.createElement('div'); bubble.className = 'pwchat-bubble'; bubble.textContent = text;
+    wrap.appendChild(bubble);
+    body.appendChild(wrap); scrollBottom();
+  }
+
+  // Load KB CSV
+  async function loadKB(){
+    const res = await fetch(KB_CSV_URL + (KB_CSV_URL.includes('?')?'&':'?') + '_=' + Date.now(), {cache:'no-store'});
+    const csv = await res.text();
+    const rows = (typeof parseCSV === 'function') ? parseCSV(csv) : fallbackParseCSV(csv);
+    const header = rows[0] || [];
+    const idx = (name) => header.findIndex(h => (h||'').toLowerCase().trim() === name);
+    const i_int = idx('intent'), i_cat = idx('category'), i_phr = idx('phrases'),
+          i_ans = idx('answer_html'), i_opt = idx('options'), i_tar = idx('option_targets');
+
+    chat.kb = rows.slice(1).map(r => ({
+      intent: (r[i_int]||'').trim(),
+      category: (r[i_cat]||'').trim(),
+      phrases: (r[i_phr]||'').trim(),
+      answer_html: (r[i_ans]||'').trim(),
+      options: (r[i_opt]||'').trim(),
+      option_targets: (r[i_tar]||'').trim()
+    })).filter(x => x.intent);
+
+    chat.map.clear();
+    chat.kb.forEach(x => chat.map.set(x.intent.toLowerCase(), x));
+    chat.kbLoaded = true;
+  }
+  function fallbackParseCSV(str){
+    const lines = str.trim().split(/\r?\n/);
+    return lines.map(l=>{
+      const out=[]; let cur=''; let q=false;
+      for(let i=0;i<l.length;i++){
+        const ch=l[i];
+        if(ch==='\"'){ q=!q; continue; }
+        if(ch===',' && !q){ out.push(cur); cur=''; continue; }
+        cur += ch;
+      }
+      out.push(cur);
+      return out.map(s=>s.trim());
+    });
+  }
+
+  // Router
+  function goIntent(key){
+    if (!key) return;
+    const k = String(key).trim().toLowerCase();
+    const node = chat.map.get(k);
+    if (!node){ addBot("Sorry, I didn't get that."); return; }
+    const opts = buildOptions(node);
+    addBot(node.answer_html || "…", opts);
+
+    // Special: open_form => open issue form panel focus
+    if (k === 'open_form'){
+      // Just scroll page to your main form
+      const form = document.getElementById('issueForm');
+      if (form) form.scrollIntoView({behavior:'smooth'});
+    }
+
+    // Rating intents -> log to feedback sheet
+    if (/^rate_[1-5]$/.test(k)) {
+      const rating = Number(k.split('_')[1]);
+      submitChatRating(rating).catch(console.warn);
+    }
+  }
+  function buildOptions(node){
+    const labels = (node.options || '').split(',').map(s=>s.trim()).filter(Boolean);
+    const targets= (node.option_targets || '').split(',').map(s=>s.trim()).filter(Boolean);
+    const out=[]; for(let i=0;i<labels.length;i++){ out.push({label: labels[i], target: targets[i] || ''}); }
+    return out;
+  }
+
+  // NL match
+  function detectIntent(text){
+    const t = (text||'').toLowerCase().trim();
+    if (!t) return null;
+
+    // fast path: thanks/resolved -> rate_thanks
+    if (/\b(thanks?|thank you|resolved|done|fine now)\b/i.test(text)) return 'rate_thanks';
+
+    for (const node of chat.kb){
+      const pats = (node.phrases||'').toLowerCase().split('|').map(s=>s.trim()).filter(Boolean);
+      if (pats.some(p => p && t.includes(p))) return node.intent;
+    }
+    return 'welcome';
+  }
+
+  // Rating POST to your Apps Script (Feedback)
+  async function submitChatRating(rating){
+    try{
+      const issueId = genChatIssueId();
+      const fd = new FormData();
+      fd.set('action','feedback');
+      fd.set('sheetName','Feedback');
+      fd.set('issueIdRate', issueId);
+      fd.set('rating', String(rating));
+      fd.set('ratingNote', 'Chat rating • session='+chat.session);
+      const res = await fetch(APPS_SCRIPT_URL, { method:'POST', body: fd });
+      const txt = await res.text();
+      console.log('Rating response:', txt);
+    }catch(err){ console.warn('Rating log failed', err); }
+  }
+  function genChatIssueId(){
+    const d=new Date(), pad=n=>String(n).padStart(2,'0');
+    return `CHAT-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}-${Math.floor(Math.random()*900+100)}`;
+  }
+
+  // Send handler
+  async function onSend(){
+    const q = input.value.trim();
+    if (!q) return;
+    addUser(q);
+    input.value = '';
+    const intent = detectIntent(q) || 'welcome';
+    goIntent(intent);
+  }
+  sendBtn.onclick = onSend;
+  input.addEventListener('keydown', e=>{ if (e.key==='Enter') onSend(); });
+
+  // Boot
+  async function boot(){
+    try{
+      addBot("Loading…");
+      await loadKB();
+      // open welcome
+      const welcome = chat.map.get('welcome');
+      if (welcome) addBot(welcome.answer_html, buildOptions(welcome));
+      else addBot("Welcome to <b>PW Gulf</b> 👋");
+    }catch(err){
+      console.error(err);
+      addBot("KB load failed. Please try again later.");
+    }
+  }
+})();
+</script>
+<!-- ====== /PW Gulf Chatbot ====== -->
+
+  
 </body>
 </html>
